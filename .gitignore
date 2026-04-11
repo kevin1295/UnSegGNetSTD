@@ -1,3 +1,7 @@
+# datasets
+DUTS-TE/
+.vscode/
+
 # custom
 medsam_vit_b.pth
 model.pt

@@ -23,7 +23,7 @@ class Segmentation:
         self.resolution = resolution
         self.bs = bs
         self.epochs = epochs
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
         self.loss_type = loss_type
         self.threshold = threshold
         if process in ["DINO", "KMEANS_DINO"]:
