@@ -2,7 +2,6 @@ import os
 import deeplake
 import numpy as np
 from PIL import Image
-from tqdm import tqdm
 
 class Dataset:
     def __init__(self, dataset):

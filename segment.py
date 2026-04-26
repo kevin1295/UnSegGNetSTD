@@ -16,16 +16,19 @@ from gnn_pool import GNNpool
 from transformers import SamModel, SamProcessor
 
 class Segmentation:
-    def __init__(self, process, bs=False, epochs=20, resolution=(224, 224), activation=None, loss_type=None, threshold=None, conv_type=None):
+    def __init__(self, process, bs=False, epochs=20, resolution=(224, 224), device=None,
+                 activation=None, loss_type=None, threshold=None, conv_type=None,
+                 alpha=2.0, lam=1.0, eps=3.0, nb_iter=3, gen_init=False):
         if process not in ["KMEANS_DINO", "DINO", "MEDSAM_INFERENCE"]:
             raise ValueError(f'Process: {process} is not supported')
         self.process = process
         self.resolution = resolution
         self.bs = bs
         self.epochs = epochs
-        self.device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(device) if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.loss_type = loss_type
         self.threshold = threshold
+        self.activation = activation
         if process in ["DINO", "KMEANS_DINO"]:
             self.feats_dim = 384
             pretrained_weights = './dino_deitsmall8_pretrain_full_checkpoint.pth'
@@ -33,11 +36,15 @@ class Segmentation:
                 url = 'https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_full_checkpoint.pth'
                 util.download_url(url, pretrained_weights)
             self.extractor = ViTExtractor(model_dir=pretrained_weights, device=self.device)
-            self.model = GNNpool(self.feats_dim, 64, 32, 2, self.device, activation, loss_type, conv_type).to(self.device)
+            self.model = GNNpool(self.feats_dim, 64, 32, 2,
+                                 self.device, activation, loss_type, conv_type,
+                                 alpha=alpha, lam=lam, entropy_epsilon=eps, nb_iterations=nb_iter
+                                 ).to(self.device)
         elif process == "MEDSAM_INFERENCE":
             self.processor = SamProcessor.from_pretrained("wanglab/medsam-vit-base")
             self.model = SamModel.from_pretrained("wanglab/medsam-vit-base").to(self.device)
-        torch.save(self.model.state_dict(), 'model.pt')
+        if gen_init:
+            torch.save(self.model.state_dict(), 'model.pt')
         self.model.train()
 
     def segment(self, image, mask):
@@ -62,7 +69,15 @@ class Segmentation:
                 W = util.create_adj(F, self.loss_type, self.threshold)
                 node_feats, edge_index, edge_weight = util.load_data(W, F)
                 data = Data(node_feats, edge_index, edge_weight).to(self.device)
-                self.model.load_state_dict(torch.load('./model.pt', map_location=self.device))
+                # 加载模型权重
+                model_weights = torch.load('./model.pt', map_location=self.device, weights_only=True)
+                # 如果activ != 'STD'，删除alpha、lam、entropy_epsilon参数
+                if self.activation != 'STD':
+                    keys_to_remove = ['alpha', 'lam', 'entropy_epsilon']
+                    for key in keys_to_remove:
+                        if key in model_weights:
+                            del model_weights[key]
+                self.model.load_state_dict(model_weights)
                 opt = optim.AdamW(self.model.parameters(), lr=0.001)
 
                 for _ in range(self.epochs):

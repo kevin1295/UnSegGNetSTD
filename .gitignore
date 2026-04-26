@@ -1,11 +1,20 @@
 # datasets
 DUTS-TE/
+CUB/
+CUB_200_2011/
+segmentations/
 .vscode/
+
+#results
+output/
+search_results/
 
 # custom
 medsam_vit_b.pth
 model.pt
 dino_deitsmall8_pretrain_full_checkpoint.pth
+*.bak
+origin_bak/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
