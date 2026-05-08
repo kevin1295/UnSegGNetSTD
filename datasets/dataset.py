@@ -1,11 +1,12 @@
 import os
 import deeplake
 import numpy as np
+import pandas as pd
 from PIL import Image
 
 class Dataset:
     def __init__(self, dataset):
-        if dataset not in ["CUB", "ECSSD", "DUTS"]:
+        if dataset not in ["CUB", "ECSSD", "DUTS", "CVC"]:
             raise ValueError(f'Dataset: {dataset} is not supported')
         self.dataset = dataset
         if dataset == "CUB":
@@ -16,6 +17,8 @@ class Dataset:
             self.masks = ds["masks"]
         elif dataset == "DUTS":
             self.images, self.masks = load_duts()
+        elif dataset == "CVC":
+            self.images, self.masks = load_cvc()
         self.loader = len(self.images)
 
     def load_samples(self):
@@ -29,10 +32,14 @@ class Dataset:
                     img = np.asarray(imagep)
                     seg = np.asarray(true_maskp)
                     true_mask = np.where(seg == True, 1, 0)
-                if self.dataset == "DUTS":
+                elif self.dataset == "DUTS":
                     img = np.asarray(Image.open(imagep))
                     seg = np.asarray(Image.open(true_maskp).convert('L'))
                     true_mask = np.where(seg == 255,1,0).astype(np.uint8)
+                elif self.dataset == "CVC":
+                    img = np.asarray(Image.open(imagep))
+                    seg = np.asarray(Image.open(true_maskp).convert('L'))
+                    true_mask = np.where(seg > 0, 1, 0).astype(np.uint8)
                 yield img, true_mask
             except Exception as e:
                 print(e)
@@ -102,3 +109,34 @@ def load_duts():
     test = sorted(file_paths)
 
     return test, masks
+
+def load_cvc():
+    cp = os.path.join(os.getcwd(), 'datasets')
+    
+    # 读取metadata.csv文件获取文件路径
+    metadata_path = os.path.join(cp, 'CVC/metadata.csv')
+    
+    # 使用pandas读取CSV文件
+    df = pd.read_csv(metadata_path)
+    
+    # 根据frame_id排序
+    df = df.sort_values('frame_id')
+    
+    images = []
+    masks = []
+    
+    # 遍历每一行，使用png_image_path和png_mask_path
+    for _, row in df.iterrows():
+        png_image_path = row['png_image_path']
+        png_mask_path = row['png_mask_path']
+        
+        # 构建完整路径
+        full_image_path = os.path.join(cp, 'CVC', png_image_path)
+        full_mask_path = os.path.join(cp, 'CVC', png_mask_path)
+        
+        # 检查文件是否存在
+        if os.path.exists(full_image_path) and os.path.exists(full_mask_path):
+            images.append(full_image_path)
+            masks.append(full_mask_path)
+    
+    return images, masks

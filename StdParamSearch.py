@@ -32,7 +32,7 @@ if __name__ == '__main__':
     storage_url = f'sqlite:///{results_base_dir}/optuna.db'
     
     # 创建 Optuna 研究，使用存储后端
-    study_name = f'std_param_search_{args.dataset}_1'
+    study_name = f'std_param_search_{args.dataset}_2'
     study = optuna.create_study(
         direction='maximize',
         study_name=study_name,

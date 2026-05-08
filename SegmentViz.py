@@ -70,7 +70,7 @@ if __name__ == '__main__':
                 if args.save_as_baseline:
                     cv2.imwrite(str(output_dir / f'{cnt:04d}_baseline.png'), seg_mask.reshape(h, w, 1) * 255)
                 else:
-                    cv2.imwrite(str(output_dir / f'{cnt:04d}_pred_test.png'), seg_mask.reshape(h, w, 1) * 255)
+                    cv2.imwrite(str(output_dir / f'{cnt:04d}_pred.png'), seg_mask.reshape(h, w, 1) * 255)
                 cv2.imwrite(str(output_dir / f'{cnt:04d}_gt.png'), mask * 255)
                 cv2.imwrite(str(output_dir / f'{cnt:04d}_img.png'), img)
 
