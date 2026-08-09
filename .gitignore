@@ -9,6 +9,8 @@ segmentations/
 #results
 output/
 search_results/
+build_vis_grid.py
+optuna_analysis.py
 
 # custom
 medsam_vit_b.pth
