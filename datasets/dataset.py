@@ -3,6 +3,10 @@ import deeplake
 import numpy as np
 import pandas as pd
 from PIL import Image
+from pathlib import Path
+
+
+DATASET_ROOT = Path(__file__).resolve().parent
 
 class Dataset:
     def __init__(self, dataset):
@@ -23,95 +27,65 @@ class Dataset:
 
     def load_samples(self):
         for imagep, true_maskp in zip(self.images, self.masks):
-            try:
-                if self.dataset == "CUB":
-                    img = np.asarray(Image.open(imagep))
-                    seg = np.asarray(Image.open(true_maskp).convert('L'))
-                    true_mask = np.where(seg >= 200,1,0)
-                elif self.dataset == "ECSSD":
-                    img = np.asarray(imagep)
-                    seg = np.asarray(true_maskp)
-                    true_mask = np.where(seg == True, 1, 0)
-                elif self.dataset == "DUTS":
-                    img = np.asarray(Image.open(imagep))
-                    seg = np.asarray(Image.open(true_maskp).convert('L'))
-                    true_mask = np.where(seg == 255,1,0).astype(np.uint8)
-                elif self.dataset == "CVC":
-                    img = np.asarray(Image.open(imagep))
-                    seg = np.asarray(Image.open(true_maskp).convert('L'))
-                    true_mask = np.where(seg > 0, 1, 0).astype(np.uint8)
-                yield img, true_mask
-            except Exception as e:
-                print(e)
-            finally:
-                self.loader -= 1
+            if self.dataset == "CUB":
+                img = np.asarray(Image.open(imagep))
+                seg = np.asarray(Image.open(true_maskp).convert('L'))
+                true_mask = np.where(seg >= 200, 1, 0)
+            elif self.dataset == "ECSSD":
+                img = np.asarray(imagep)
+                seg = np.asarray(true_maskp)
+                true_mask = np.where(seg, 1, 0)
+            elif self.dataset == "DUTS":
+                img = np.asarray(Image.open(imagep))
+                seg = np.asarray(Image.open(true_maskp).convert('L'))
+                true_mask = np.where(seg == 255, 1, 0).astype(np.uint8)
+            elif self.dataset == "CVC":
+                img = np.asarray(Image.open(imagep))
+                seg = np.asarray(Image.open(true_maskp).convert('L'))
+                true_mask = np.where(seg > 0, 1, 0).astype(np.uint8)
+            yield img, true_mask
 
            
 def load_cub():
-    cp = os.path.join(os.getcwd(), 'datasets')
-    
-    fold = f'{cp}/segmentations'
-    file_paths = []
-    for root, _, files in os.walk(fold):
-        for file in files:
-            file_paths.append(os.path.join(root,file))
-
-    fold2 = f'{cp}/CUB_200_2011/images'
-    fp2 = []
-    for root, _, files in os.walk(fold2):
-        for file in files:
-            fp2.append(os.path.join(root,file))
-
-    fp2  = sorted(fp2)
-    file_paths = sorted(file_paths)
-
-    with open(f'{cp}/CUB_200_2011/train_test_split.txt') as f:
-        count = {}
+    cp = DATASET_ROOT
+    with open(cp / 'CUB_200_2011/train_test_split.txt') as f:
         pretest = set()
         for line in f:
-            x = line.split()[1]
-            if x in count:
-                count[x]+=1
-            else:
-                count[x] = 1
-            if x == "0":
-                pretest.add(line.split()[0])
+            image_id, split = line.split()
+            if split == "0":
+                pretest.add(image_id)
 
-    with open(f'{cp}/CUB_200_2011/images.txt') as u:
+    with open(cp / 'CUB_200_2011/images.txt') as u:
         test = []
         for line in u:
             x,y  = line.split()[0],line.split()[1]
             if x in pretest:
                 test.append(y)
 
-    masks = sorted([f'{cp}/segmentations/' + x[:len(x)-3] + 'png' for x in test])
-    test = sorted([f'{cp}/CUB_200_2011/images/' + x for x in test])
+    masks = sorted([str(cp / 'segmentations' / (x[:-3] + 'png')) for x in test])
+    test = sorted([str(cp / 'CUB_200_2011/images' / x) for x in test])
+    missing = [path for path in test + masks if not os.path.exists(path)]
+    if missing:
+        raise FileNotFoundError(f'CUB dataset is incomplete; missing {missing[0]}')
 
     return test, masks
 
 
 def load_duts():
-    cp = os.path.join(os.getcwd(), 'datasets')
-
-    fold = os.path.join(cp, 'DUTS-TE/DUTS-TE-Image')
-    file_paths = []
-    for root, _, files in os.walk(fold):
-        for file in files:
-            file_paths.append(os.path.join(root,file))
-
-    fold2 = os.path.join(cp, 'DUTS-TE/DUTS-TE-Mask')
-    fp2 = []
-    for root, _, files in os.walk(fold2):
-        for file in files:
-            fp2.append(os.path.join(root,file))
-
-    masks = sorted(fp2)
-    test = sorted(file_paths)
+    cp = DATASET_ROOT
+    image_dir = cp / 'DUTS-TE/DUTS-TE-Image'
+    mask_dir = cp / 'DUTS-TE/DUTS-TE-Mask'
+    test = sorted(str(path) for path in image_dir.iterdir() if path.is_file())
+    masks = sorted(str(path) for path in mask_dir.iterdir() if path.is_file())
+    if len(test) != len(masks):
+        raise ValueError(f'DUTS image/mask count mismatch: {len(test)} images, {len(masks)} masks')
+    if [Path(path).stem for path in test] != [Path(path).stem for path in masks]:
+        raise ValueError('DUTS image and mask filenames are not aligned')
 
     return test, masks
 
 def load_cvc():
-    cp = os.path.join(os.getcwd(), 'datasets')
+    cp = DATASET_ROOT
     
     # 读取metadata.csv文件获取文件路径
     metadata_path = os.path.join(cp, 'CVC/metadata.csv')
@@ -139,4 +113,6 @@ def load_cvc():
             images.append(full_image_path)
             masks.append(full_mask_path)
     
+    if not images:
+        raise FileNotFoundError(f'No complete CVC image/mask pairs found under {cp / "CVC"}')
     return images, masks

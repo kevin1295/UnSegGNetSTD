@@ -5,9 +5,10 @@ from tqdm import tqdm
 import cv2
 import json
 from pathlib import Path
+from cli_utils import set_seed, str2bool
 
 parser = ArgumentParser()
-parser.add_argument("--bs", type=bool, default=False)
+parser.add_argument("--bs", type=str2bool, default=False)
 parser.add_argument("--epochs", type=int, default=20)
 parser.add_argument("--resolution", nargs=2, type=int, default=[224, 224])
 parser.add_argument("--device", type=str, default='cuda')
@@ -24,10 +25,13 @@ parser.add_argument("--nb_iter", type=int, default=3)
 parser.add_argument("--gen_init", action='store_true')
 parser.add_argument("--save_as_baseline", action='store_true')
 parser.add_argument("--no_load_hparams", action='store_true')
+parser.add_argument("--seed", type=int, default=42)
+parser.add_argument("--checkpoint", type=str, default='model.pt')
 
 args = parser.parse_args()
 
 if __name__ == '__main__':
+    set_seed(args.seed)
     output_dir = Path('output') / Path(args.dataset)
     output_dir.mkdir(parents=True, exist_ok=True)
     if not args.no_load_hparams:
@@ -43,7 +47,8 @@ if __name__ == '__main__':
 
     seg = Segmentation(process=args.process, bs=args.bs, epochs=args.epochs, resolution=tuple(args.resolution), device=args.device,
                        activation=args.activation, loss_type=args.loss_type, threshold=args.threshold, conv_type=args.conv_type,
-                       alpha=args.alpha, lam=args.lam, eps=args.eps, nb_iter=args.nb_iter, gen_init=args.gen_init)
+                       alpha=args.alpha, lam=args.lam, eps=args.eps, nb_iter=args.nb_iter,
+                       gen_init=args.gen_init, checkpoint_path=args.checkpoint)
     ds = Dataset(args.dataset)
 
     total_iou = 0
@@ -51,32 +56,37 @@ if __name__ == '__main__':
     
     total_files = ds.loader
 
+    failed_samples = 0
     with tqdm(ds.load_samples(), total=total_files, desc="Processing images") as pbar:
-        for img, mask in pbar:
-            cnt = pbar.n + 1
-            try: 
+        for sample_idx, (img, mask) in enumerate(pbar, start=1):
+            try:
                 iou, seg_mask, _ = seg.segment(img, mask)
-                total_iou += iou
-                total_samples += 1
-                
-                current_miou = total_iou / total_samples
-                pbar.set_postfix({
-                    'Current IoU': f'{iou:.2f}',
-                    'mIoU so far': f'{current_miou:.2f}'
-                })
-
-                # seg_mask(h, w) mask(h, w, 1) img(h, w, 3)
-                h, w = seg_mask.shape
-                if args.save_as_baseline:
-                    cv2.imwrite(str(output_dir / f'{cnt:04d}_baseline.png'), seg_mask.reshape(h, w, 1) * 255)
-                else:
-                    cv2.imwrite(str(output_dir / f'{cnt:04d}_pred.png'), seg_mask.reshape(h, w, 1) * 255)
-                cv2.imwrite(str(output_dir / f'{cnt:04d}_gt.png'), mask * 255)
-                cv2.imwrite(str(output_dir / f'{cnt:04d}_img.png'), img)
-
-            except Exception as e:
-                print(e)
+            except Exception as exc:
+                failed_samples += 1
+                print(f'Failed sample {sample_idx}: {exc}')
                 continue
+
+            h, w = seg_mask.shape
+            prediction_label = 'baseline' if args.save_as_baseline else 'pred'
+            outputs = {
+                output_dir / f'{sample_idx:04d}_{prediction_label}.png': seg_mask.reshape(h, w, 1) * 255,
+                output_dir / f'{sample_idx:04d}_gt.png': mask * 255,
+                output_dir / f'{sample_idx:04d}_img.png': img,
+            }
+            for path, array in outputs.items():
+                if not cv2.imwrite(str(path), array):
+                    raise OSError(f'Failed to write output image: {path}')
+
+            total_iou += iou
+            total_samples += 1
+            current_miou = total_iou / total_samples
+            pbar.set_postfix({
+                'Current IoU': f'{iou:.2f}',
+                'mIoU so far': f'{current_miou:.2f}'
+            })
     
+    if total_samples == 0:
+        raise RuntimeError('No samples were evaluated successfully.')
     final_miou = total_iou / total_samples
-    print(f'Final mIoU: {final_miou:.4f}')
+    print(f'Final mIoU: {final_miou:.4f} '
+          f'({total_samples} successful, {failed_samples} failed)')

@@ -1,6 +1,5 @@
 import optuna
 from optuna.visualization import plot_optimization_history, plot_param_importances, plot_slice, plot_contour
-import matplotlib.pyplot as plt
 from train_fn import get_base_argparser, train_fn
 from pathlib import Path
 import json
@@ -21,6 +20,8 @@ def objective(trial):
 
 if __name__ == '__main__':
     parser = get_base_argparser()
+    parser.add_argument('--n_trials', type=int, default=50)
+    parser.add_argument('--study_name', type=str)
     args = parser.parse_args()
     
     # 创建结果目录
@@ -32,16 +33,16 @@ if __name__ == '__main__':
     storage_url = f'sqlite:///{results_base_dir}/optuna.db'
     
     # 创建 Optuna 研究，使用存储后端
-    study_name = f'std_param_search_{args.dataset}_2'
+    study_name = args.study_name or f'std_param_search_{args.dataset}'
     study = optuna.create_study(
         direction='maximize',
         study_name=study_name,
         storage=storage_url,
-        # load_if_exists=True
+        load_if_exists=True,
     )
     
     # 运行参数搜索，最多进行 50 次试验
-    study.optimize(objective, n_trials=50)
+    study.optimize(objective, n_trials=args.n_trials)
     
     # 输出最佳参数和结果
     print('Best trial:')
@@ -66,7 +67,7 @@ if __name__ == '__main__':
         print(f'Trial {i+1}: value={trial.value:.4f}, params={trial.params}')
     
     print('\nResults saved to:')
-    print(f'- {results_dir}/ (SQLite database)')
+    print(f'- {results_base_dir / "optuna.db"} (SQLite database)')
     print(f'- {results_dir}/best_std_params.json (Best STD parameters)')
     
     # Optuna dashboard command
@@ -92,8 +93,8 @@ if __name__ == '__main__':
         try:
             fig = plot_contour(study, params=[param1, param2])
             fig.write_image(vis_dir / f'contour_{param1}_{param2}.png')
-        except Exception as e:
-            print(f"Error plotting contour for {param1} and {param2}: {e}")
+        except (RuntimeError, ValueError) as exc:
+            print(f"Error plotting contour for {param1} and {param2}: {exc}")
     
     print('\nResults saved to:')
     print(f'- {results_dir}/ (SQLite database)')
