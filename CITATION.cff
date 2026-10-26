@@ -1,13 +1,13 @@
 # Citation metadata for UnSegGNetSTD.
 #
 # 说明（维护者注）：
-# - 作者信息取自本仓 git log（kevin1295 <goldfish1295@outlook.com>）。
-# - 稿件标题取自论文源文件 main.tex 的 \title。
+# - 作者列表与顺序取自论文源文件 main.tex 的 \author 块（Yiming Yang、Jiaye Xu、
+#   Jun Liu、Shengbo Zhang、Wei Wan）；通讯作者为 Wei Wan（main.tex 中的 \author*）。
+# - 邮箱沿用论文中的署名邮箱，不使用个人邮箱别名。
 # - 投稿版论文没有 Code Availability 段落，因此本文件不含任何"代码可在此获取"
-#   之类的可用性声明，也不再给出仓库 URL / 摘要，只保留题目、作者与稿件状态。
+#   之类的可用性声明，也不给仓库 URL / 摘要，只保留题目、作者与稿件状态。
 # - date-released / version 故意留空：仓库未记录发布年份与版本号，此处不编造。
-# - cff-version 1.2.0 未定义 "status" 字段；保留该行以标明稿件状态，
-#   严格的 CFF 校验器可能对其报警，可自行删除。
+# - cff-version 1.2.0 未定义 "status" 字段；该行仅作稿件状态标记，严格的校验器可能报警。
 
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
@@ -15,10 +15,26 @@ title: "UnSegGNetSTD: Unsupervised Image Segmentation with Soft Threshold Dynami
 type: software
 status: "Manuscript under review (JMIV)"
 authors:
+  - family-names: "Yang"
+    given-names: "Yiming"
+    email: "ymyang@ncepu.edu.cn"
+    affiliation: "School of Mathematics and Physics, North China Electric Power University, Beijing, China; Laboratory of Mathematics and Complex Systems, School of Mathematical Sciences, Beijing Normal University, Beijing, China"
   - family-names: "Xu"
     given-names: "Jiaye"
     alias: "kevin1295"
-    email: "goldfish1295@outlook.com"
+    email: "goldfish1295@163.com"
+    affiliation: "School of Mathematics and Physics, North China Electric Power University, Beijing, China"
+  - family-names: "Liu"
+    given-names: "Jun"
+    email: "jliu@bnu.edu.cn"
+    affiliation: "Laboratory of Mathematics and Complex Systems, School of Mathematical Sciences, Beijing Normal University, Beijing, China"
+  - family-names: "Zhang"
+    given-names: "Shengbo"
+    email: "120242209002@ncepu.edu.cn"
+    affiliation: "School of Mathematics and Physics, North China Electric Power University, Beijing, China"
+  - family-names: "Wan"
+    given-names: "Wei"
+    email: "weiwan@ncepu.edu.cn"
     affiliation: "School of Mathematics and Physics, North China Electric Power University, Beijing, China"
 license: MIT
 preferred-citation:

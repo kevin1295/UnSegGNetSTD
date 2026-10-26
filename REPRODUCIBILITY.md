@@ -31,7 +31,6 @@
 | opencv-python | `4.13.0.92` |
 | scikit-learn | `1.8.0`（`KMEANS_DINO` 与 IoU 相关工具） |
 | deeplake | `3.9.52`（在线加载 ECSSD） |
-| gdown | `5.2.1`（MedSAM `.pth` 备用下载） |
 
 CUDA wheel 相关包（`nvidia-*-cu12`、`triton==3.0.0`）由 `torch==2.4.0+cu124`
 带入，版本见 `requirements.txt`。
@@ -60,7 +59,8 @@ MedSAM Python 包在 `requirements.txt` 中已 pin 到 commit：
 3. `pip install torch_geometric class_resolver`；
 4. `pip install -r requirements.txt`（覆盖上面多数包的精确版本）；
 5. `pip install` 上面 pin 住的 MedSAM commit；
-6. `gdown` 拉取 `medsam_vit_b.pth`（**可选**，见第 7 节）。
+6. MedSAM 权重是可选的，脚本会用 `transformers` 从 Hugging Face Hub 预取
+   （`script.sh` 的 `fetch_medsam_weights_hf`），失败也不影响默认 DINO 流程。
 
 > 注意：第 2 步的 `torch-scatter`/`torch-sparse` 在 `script.sh` 里不带版本号，
 > 但 `requirements.txt` 会装回 `+pt24cu124` 的固定版本。若 wheel 索引不可用，可直接
@@ -73,7 +73,7 @@ MedSAM Python 包在 `requirements.txt` 中已 pin 到 commit：
 | DINO `dino_deitsmall8_pretrain_full_checkpoint.pth`（约 336 MB） | `segment.py` 首次运行时自动从 `https://dl.fbaipublicfiles.com/dino/dino_deitsmall8_pretrain/dino_deitsmall8_pretrain_full_checkpoint.pth` 下载到仓库根目录；离线时可手动放置同名文件 |
 | MedSAM（`wanglab/medsam-vit-base`） | `transformers` 自动从 Hugging Face Hub 下载；离线时设置 `HF_HOME` 指向预置缓存，或用 `HF_ENDPOINT` 镜像 |
 | `model.pt`（约 108 KB，**已入库**） | 随机初始化检查点，见 `README.md`；可用 `--gen_init` 重建 |
-| `medsam_vit_b.pth`（约 358 MB） | `script.sh` 中的 `gdown` 兜底；当前代码路径不读取它 |
+| `medsam_vit_b.pth`（约 358 MB） | **不需要**。本仓不加载它；旧版的 `gdown` 兜底已移除 |
 
 ## 2. 硬件假设 / Hardware
 
@@ -212,8 +212,8 @@ python main.py --dataset CUB --process MEDSAM_INFERENCE
      `ValueError: MEDSAM_INFERENCE requires an explicit prompt_box`；`main.py`/`SegmentViz.py`
      不传该参数，异常会被逐图捕获，最终以 `RuntimeError: No samples were evaluated successfully.`
      退出；
-   - `script.sh` 里的 `gdown` 走 Google Drive 直链，链接易被限流或失效；它下载的
-     `medsam_vit_b.pth` 当前代码路径并不读取。
+   - MedSAM 权重获取失败不影响默认流程（`features_extract.py` 只 import
+     `sam_model_registry`，从不构建 SAM 模型）。
 7. **`SegmentViz.py` 找不到超参数**：默认读取
    `search_results/<dataset>/best_std_params.json`，该文件不随仓库发布，缺失时抛
    `FileNotFoundError: Configuration file not found`。用 `--no_load_hparams` + 显式参数绕过。

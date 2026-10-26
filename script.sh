@@ -29,9 +29,10 @@ pip install "git+https://github.com/bowang-lab/MedSAM.git@${MEDSAM_COMMIT}"
 # use. A direct Hub download is preferred; set HF_ENDPOINT to use a mirror, or
 # HF_HOME to reuse a pre-populated cache on offline machines.
 #
-# The Google Drive copy of medsam_vit_b.pth is kept only as a fallback for users
-# of the standalone `segment_anything` SAM registry. Nothing in this repository
-# loads that file, and the Drive link can be rate-limited or rotated.
+# Note: nothing in this repository loads medsam_vit_b.pth. `features_extract.py`
+# only imports `sam_model_registry` at module level and never builds a SAM model,
+# so MedSAM weights are optional; the previous Google Drive (gdown) fallback was
+# removed because the link is dead and gdown is not a requirement.
 # ---------------------------------------------------------------------------
 fetch_medsam_weights_hf() {
   python - <<'PY'
@@ -42,12 +43,8 @@ print("MedSAM weights cached from the Hugging Face Hub.")
 PY
 }
 
-fetch_medsam_weights_gdrive() {
-  # Legacy Google Drive mirror of medsam_vit_b.pth (file id from the MedSAM repo).
-  gdown --id 1UAmWL88roYR7wKlnApw5Bcuzf2iQgk6_ -O medsam_vit_b.pth
-}
-
 if ! fetch_medsam_weights_hf; then
-  echo "Hugging Face download failed; falling back to the Google Drive mirror." >&2
-  fetch_medsam_weights_gdrive || echo "gdown fallback failed; MedSAM weights are optional for the default DINO path." >&2
+  echo "Hugging Face download failed." >&2
+  echo "MedSAM weights are optional: the default DINO pipeline does not read them," >&2
+  echo "and features_extract.py only imports segment_anything without building a model." >&2
 fi

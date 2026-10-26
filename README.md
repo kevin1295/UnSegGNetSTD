@@ -149,11 +149,11 @@ The standalone MedSAM package is pinned to a specific commit:
 pip install "git+https://github.com/bowang-lab/MedSAM.git@d71e8a1a99ad751840a22a7fa3ecfb4166fb1488"
 ```
 
-`script.sh` additionally keeps a `gdown` fallback that fetches the original
-`medsam_vit_b.pth` checkpoint from Google Drive. That file is not required by
-the current `transformers`-based inference path (nothing in this repository
-loads it); it is kept only for users of the standalone `segment_anything`
-SAM registry and may fail if the Drive link is rate-limited.
+MedSAM weights are optional. Nothing in this repository loads `medsam_vit_b.pth`:
+`features_extract.py` imports `sam_model_registry` at module level but never
+builds a SAM model, so only the package (pinned above) has to be installed. The
+previous `gdown` fallback that pulled the `.pth` from Google Drive was removed —
+the link is dead and `gdown` is no longer a requirement.
 
 ## Supported datasets
 
