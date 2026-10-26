@@ -5,12 +5,11 @@ unsupervised binary image segmentation. Images are represented as patch graphs
 using pretrained DINO features, then optimized per image with either the
 original GCN softmax output or the STD-regularized output.
 
-This repository is the reference implementation that accompanies a manuscript
-currently under review at the *Journal of Mathematical Imaging and Vision*
-(JMIV). Citation metadata is in `CITATION.cff`, the full reproduction protocol
+This repository contains the reference implementation of the UnSegGNet + STD
+pipeline. Citation metadata is in `CITATION.cff`, the full reproduction protocol
 is in `REPRODUCIBILITY.md`, and upstream code provenance and licenses are
 listed in `THIRD_PARTY_NOTICES.md`. Reference quantitative results are reported
-in the manuscript and are intentionally not duplicated here.
+in the paper and are intentionally not duplicated here.
 
 ## Repository layout
 
