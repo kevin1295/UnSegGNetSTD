@@ -5,6 +5,13 @@ unsupervised binary image segmentation. Images are represented as patch graphs
 using pretrained DINO features, then optimized per image with either the
 original GCN softmax output or the STD-regularized output.
 
+This repository is the reference implementation that accompanies a manuscript
+currently under review at the *Journal of Mathematical Imaging and Vision*
+(JMIV). Citation metadata is in `CITATION.cff`, the full reproduction protocol
+is in `REPRODUCIBILITY.md`, and upstream code provenance and licenses are
+listed in `THIRD_PARTY_NOTICES.md`. Reference quantitative results are reported
+in the manuscript and are intentionally not duplicated here.
+
 ## Repository layout
 
 - `main.py`: batch evaluation entry point.
@@ -13,7 +20,11 @@ original GCN softmax output or the STD-regularized output.
 - `SegmentViz.py`: evaluation with predicted-mask export.
 - `segment.py`: DINO feature extraction, per-image optimization, and metrics.
 - `gnn_pool.py`: GCN, DMON/NCUT losses, and STD output implementation.
+- `model.pt`: the shared random initialization checkpoint (see below).
 - `datasets/DATASETS.md`: dataset download and directory instructions.
+- `REPRODUCIBILITY.md`: environment, commands, randomness, and failure modes.
+- `THIRD_PARTY_NOTICES.md`: provenance and licenses of third-party code.
+- `CITATION.cff`: how to cite this repository and the associated manuscript.
 
 ## Setup
 
@@ -22,18 +33,37 @@ original GCN softmax output or the STD-regularized output.
 3. Install the remaining dependencies with `pip install -r requirements.txt`.
 4. Prepare CUB, ECSSD, or DUTS according to `datasets/DATASETS.md`.
 
-The DINO checkpoint is downloaded automatically on first use.
+The DINO checkpoint is downloaded automatically on first use and is expected at
+`dino_deitsmall8_pretrain_full_checkpoint.pth` in the repository root; if the
+download is blocked, place the file there manually.
+
+See `REPRODUCIBILITY.md` for the versions recorded by this repository, the full
+command set, and known failure modes.
 
 ## Unified initialization checkpoint
 
-`model.pt` stores the common random initialization used for all images and for
-the baseline/STD comparison. Shared GCN and MLP parameters are restored before
-each image is optimized. STD-only scalar parameters use the values supplied by
+`model.pt` (about 108 KB) is part of this repository on purpose. It stores the
+single random initialization that is shared by every image and by both the
+baseline and the STD run: the GCN and MLP parameters are restored from this
+checkpoint before each image is optimized, so baseline and STD results differ
+only in the output layer (softmax versus STD-regularized softmax). Because of
+that, it is a reproduction prerequisite rather than a disposable artifact.
+STD-only scalar parameters (`alpha`, `lam`, `eps`) are supplied by
 `--alpha`, `--lam`, and `--eps` when they are absent from the checkpoint.
 
-Create or replace the checkpoint by running an entry point with `--gen_init`,
-or use `main.py`, which initializes it by default. Use `--checkpoint PATH` to
-keep multiple initialization states.
+Regenerate it with `--gen_init`, which saves the freshly initialized state
+before any optimization:
+
+```bash
+python SegmentViz.py --dataset ECSSD --activation STD --gen_init
+```
+
+`main.py` always regenerates the checkpoint at startup (its `gen_init` flag is
+enabled unconditionally), so a plain `python main.py ...` run also rewrites
+`model.pt`. With the default `--seed 42` the regenerated state is the same one
+that ships in this repository.
+
+Use `--checkpoint PATH` to keep several initialization states side by side.
 
 ## Evaluation
 
@@ -54,6 +84,10 @@ Both commands use seed 42 by default. Override it with `--seed`. The final
 summary reports successful and failed samples separately; a run with no valid
 samples exits with an error instead of reporting an invalid mIoU.
 
+The tuned values used in the manuscript were found with the Optuna search
+described in `REPRODUCIBILITY.md`; the search artifacts themselves are not
+published (see the note below).
+
 ## Hyperparameter search and visualizations
 
 Run the 50-trial Optuna search with:
@@ -62,14 +96,65 @@ Run the 50-trial Optuna search with:
 python StdParamSearch.py --dataset ECSSD --activation STD --gen_init
 ```
 
+The search writes `search_results/optuna.db`, a per-dataset
+`search_results/<dataset>/best_std_params.json`, and a set of Optuna plots
+under `search_results/<dataset>/std_visualizations/`.
+
 Generate masks using the saved best parameters with:
 
 ```bash
 python SegmentViz.py --dataset ECSSD --activation STD
 ```
 
-Search artifacts are stored under `search_results/`, and exported masks are
-stored under `output/<dataset>/`.
+Exported masks are stored under `output/<dataset>/`.
+
+**Note on artifacts that are not published.** `search_results/` (the Optuna
+databases, best-parameter JSON files, and search plots), `optuna_analysis.py`
+and `build_vis_grid.py` are author-internal experiment products and plotting
+scripts. They are not distributed with this repository, and neither the search
+results nor the figure-building scripts should be expected here. Only the code
+needed to re-run the search from scratch is public.
+
+Consequently `SegmentViz.py` cannot load hyperparameters out of the box: by
+default it reads `search_results/<dataset>/best_std_params.json`. Either run
+`StdParamSearch.py` first, or pass `--no_load_hparams` together with explicit
+`--alpha/--lam/--eps/--nb_iter` values, e.g.
+
+```bash
+python SegmentViz.py --dataset ECSSD --activation STD --no_load_hparams \
+  --alpha <alpha> --lam <lambda> --eps <epsilon> --nb_iter <T>
+```
+
+Fill in the tuned values from your own `StdParamSearch.py` run; the values used
+for the manuscript are reported in the paper.
+
+## MedSAM weights
+
+The MedSAM baseline (`--process MEDSAM_INFERENCE`) loads weights through
+`transformers` from the Hugging Face Hub repository
+[`wanglab/medsam-vit-base`](https://huggingface.co/wanglab/medsam-vit-base),
+which is downloaded automatically on first use. Pre-download it explicitly with:
+
+```bash
+python -c "from transformers import SamModel, SamProcessor; \
+SamModel.from_pretrained('wanglab/medsam-vit-base'); \
+SamProcessor.from_pretrained('wanglab/medsam-vit-base')"
+```
+
+For offline machines, set `HF_HOME` to a pre-populated cache directory, or
+mirror the download with `HF_ENDPOINT`.
+
+The standalone MedSAM package is pinned to a specific commit:
+
+```bash
+pip install "git+https://github.com/bowang-lab/MedSAM.git@d71e8a1a99ad751840a22a7fa3ecfb4166fb1488"
+```
+
+`script.sh` additionally keeps a `gdown` fallback that fetches the original
+`medsam_vit_b.pth` checkpoint from Google Drive. That file is not required by
+the current `transformers`-based inference path (nothing in this repository
+loads it); it is kept only for users of the standalone `segment_anything`
+SAM registry and may fail if the Drive link is rate-limited.
 
 ## Supported datasets
 
@@ -79,7 +164,11 @@ from Git.
 
 ## Acknowledgements and license
 
-This repository extends the original UnSegGNet implementation and includes
-code derived from DINO ViT feature extraction and DeepCut. See
-`README_ORIGIN.md` for the original project description and acknowledgements.
-The repository is distributed under the MIT License in `LICENSE`.
+This repository extends the original UnSegGNet implementation and includes code
+derived from DINO ViT feature extraction and DeepCut. See `README_ORIGIN.md`
+for the original project description and acknowledgements, and
+`THIRD_PARTY_NOTICES.md` for the per-component license summary.
+
+The repository is distributed under the MIT License in `LICENSE`
+(Copyright (c) 2024 Sai Gopal Reddy Kovvuri, inherited from the upstream
+UnSegGNet project).

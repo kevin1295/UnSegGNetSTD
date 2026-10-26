@@ -1,0 +1,53 @@
+# Citation metadata for UnSegGNetSTD.
+#
+# 说明（维护者注）：
+# - 作者信息取自本仓 git log（kevin1295 <goldfish1295@outlook.com>）。
+# - 稿件标题取自论文源文件 main.tex 的 \title。
+# - date-released / version 故意留空：仓库未记录发布年份与版本号，此处不编造。
+# - cff-version 1.2.0 未定义 "status" 字段，但按归档要求保留了该行；严格的
+#   CFF 校验器可能对其报警，可自行删除。
+
+cff-version: 1.2.0
+message: "If you use this code, please cite this repository and the associated manuscript."
+title: "UnSegGNetSTD: Unsupervised Image Segmentation with Soft Threshold Dynamics Regularization"
+type: software
+status: "Manuscript under review (JMIV)"
+abstract: >-
+  Reference implementation of Soft Threshold Dynamics (STD) regularization for
+  unsupervised binary image segmentation. Images are represented as patch graphs
+  built from pretrained DINO ViT features and optimized per image with either the
+  standard GCN softmax or the STD-regularized softmax. This code accompanies a
+  manuscript currently under review at the Journal of Mathematical Imaging and
+  Vision (JMIV); reference quantitative results are reported in the manuscript.
+authors:
+  - family-names: "Xu"
+    given-names: "Jiaye"
+    alias: "kevin1295"
+    email: "goldfish1295@outlook.com"
+    affiliation: "School of Mathematics and Physics, North China Electric Power University, Beijing, China"
+repository-code: "https://github.com/kevin1295/UnSegGNetSTD"
+url: "https://github.com/kevin1295/UnSegGNetSTD"
+license: MIT
+keywords:
+  - "unsupervised image segmentation"
+  - "soft threshold dynamics"
+  - "graph neural networks"
+  - "variational methods"
+  - "DINO features"
+preferred-citation:
+  type: article
+  title: >-
+    A Unified Variational Framework with Soft Threshold Dynamics Regularization
+    for Graph-Structured Data and Unsupervised Image Segmentation
+  journal: "Journal of Mathematical Imaging and Vision"
+  authors:
+    - family-names: "Yang"
+      given-names: "Yiming"
+    - family-names: "Xu"
+      given-names: "Jiaye"
+    - family-names: "Liu"
+      given-names: "Jun"
+    - family-names: "Zhang"
+      given-names: "Shengbo"
+    - family-names: "Wan"
+      given-names: "Wei"

@@ -13,8 +13,9 @@ build_vis_grid.py
 optuna_analysis.py
 
 # custom
+# model.pt is intentionally versioned: it is the shared random initialization
+# checkpoint required for reproduction (see README.md).
 medsam_vit_b.pth
-model.pt
 dino_deitsmall8_pretrain_full_checkpoint.pth
 *.bak
 origin_bak/
