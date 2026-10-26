@@ -37,6 +37,13 @@ authors:
     email: "weiwan@ncepu.edu.cn"
     affiliation: "School of Mathematics and Physics, North China Electric Power University, Beijing, China"
 license: MIT
+# 通讯作者（main.tex 中的 \author*）。CFF 1.2.0 没有 "corresponding-author"
+# 字段，规范做法是用顶层 contact 指明公开联系方式。
+contact:
+  - family-names: "Wan"
+    given-names: "Wei"
+    email: "weiwan@ncepu.edu.cn"
+    affiliation: "School of Mathematics and Physics, North China Electric Power University, Beijing, China"
 preferred-citation:
   type: article
   title: >-
